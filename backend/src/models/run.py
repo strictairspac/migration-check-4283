@@ -8,6 +8,7 @@ class Run(Base):
  mapping_id=Column(Integer,ForeignKey('mappings.id'),nullable=False)
  status=Column(String(20),nullable=False,default='queued')
  cancel_requested=Column(Boolean,nullable=False,default=False)
+ heartbeat_at=Column(DateTime,nullable=True)
  snapshot=Column(JSON,nullable=False)
  progress=Column(JSON,nullable=True)
  result=Column(JSON,nullable=True)

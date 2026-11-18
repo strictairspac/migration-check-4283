@@ -5,7 +5,7 @@
 ## 场景与业务
 上游实验室交付旧字段JSON检验记录；过去人工改字段名、复制到新表并凭总行数判断成功。痛点：非法数值默默丢失、重复委托号覆盖、备份无法证明能恢复。本站登记原始行，字段映射规定类型和必填，Python逐块转换并保留拒绝原行，真实PG目标表一次提交。下游质量复核人下载对账凭据，管理员用JSON逻辑备份恢复本次运行目标并核验。
 
-四业务页：源批次、字段映射、迁移执行（可取消）、差异核对（拒绝区/目标行/备份）；管理员另有审计和回传恢复。三核心实体batches/mappings/runs，另target_rows持久化目标行。全部实体按模型/schema/service/controller/routes/前端api/store/page贯穿。
+四业务页加一台账页：源批次、字段映射、迁移执行（可取消）、差异核对（拒绝区/目标行/备份）、容量配额（上限/实占/预留/拒绝原因）；管理员另有审计和回传恢复。核心实体batches/mappings/runs，另target_rows持久化目标行，capacity/reservations/capacity_events构成目标行容量台账。全部实体按模型/schema/service/controller/routes/前端api/store/page贯穿。
 
 ## 启动与账号
 ```sh
@@ -40,6 +40,8 @@ seed含三账号、三批次（三种正常/异常/空输入）、三映射。�
 
 最多2000源行、每行20列、单元格500字符；每块1-500行。逐块更新进度；取消在块间检查，最终提交前锁定run再次检查，成功目标一次提交；取消/异常没有部分目标数据。后台任务使用简单Redis单消费者；进程崩溃可能留下running状态，需人工复核并新建任务，不自动重试。
 
+检验库可设目标行上限（TARGET_ROW_LIMIT，管理员可在容量配额页调整，不得低于当前实占）。迁移一受理即按映射预校验源行并预留目标位置，坏行与同键重复行不占额度；容量扣减用带条件的原子更新，并发受理不会超额，容量不足拒绝受理并说明还差多少行。落库时预留转为实占；失败、取消或执行器失联（心跳超过EXECUTOR_STALE_SECONDS）归还额度，被回收后迟到的执行者提交守卫失败、不能再落库；预留/归还按run_id幂等，重试不重复占额。旧备份恢复按目标行净增占额度，等量替换净增为0，满库也能恢复。容量配额页可核对上限、实占（台账与目标表实际行数对照）、预留记录与拒绝原因。
+
 下载备份为本工具目标行的逻辑JSON快照(version1)，含run_id/rows/row_hashes/checksum，不是pg_dump或物理备份，不含WAL/索引/权限。管理员恢复只允许该运行已保存checksum完全匹配的备份；先核验逐行/总体摘要、schema和自然键，再事务性替换该运行target_rows，回读重新计算摘要并保存recovery记录。篡改、错运行、未完成运行拒绝，恢复事务回滚；不能用任意新数据覆盖目标。
 
 受控场景演示旧字段到新目标结构的逻辑迁移，数据库真实保存源/映射/目标/对账。不能连接远端数据库，不宣称生产异构迁移或灾备能力。
@@ -49,4 +51,4 @@ Python3.11/FastAPI/SQLAlchemy/psycopg/Redis/PostgreSQL16，原生HTML/CSS/JS，n
 
 backend/src按models/schemas/services/controllers/routes/middlewares/config/constants/utils；backend/scripts/seed_demo.py；backend/migrations记录元数据版本。frontend/src按api/stores/pages/components/common/hooks/router/types/constants/utils；共享table/status/feedback；forms/poll hooks。角色/状态/类型枚举在backend/src/constants/enums.py与frontend/src/constants/enums.js。墨绿邮政凭单视觉，Noto Sans SC/Space Mono双字体来自Google Fonts，离线回退；桌面/平板/手机响应。
 
-.env.example定义COMPOSE_PROJECT_NAME/三端口/JWT_SECRET/SEED_DEMO；DATABASE_URL/REDIS_URL由Compose注入。启动SEED_DEMO失败只记日志。本地开发pip install -r backend/requirements.txt，设数据库/Redis/JWT环境变量，在backend运行uvicorn src.main:app --reload；前端需/api代理，不能file://。测试/截图/日志放批次test-artifacts/gb-4109，源码不混入。MIT License。
+.env.example定义COMPOSE_PROJECT_NAME/三端口/JWT_SECRET/SEED_DEMO/TARGET_ROW_LIMIT/EXECUTOR_STALE_SECONDS；DATABASE_URL/REDIS_URL由Compose注入。启动SEED_DEMO失败只记日志。本地开发pip install -r backend/requirements.txt，设数据库/Redis/JWT环境变量，在backend运行uvicorn src.main:app --reload；前端需/api代理，不能file://。测试/截图/日志放批次test-artifacts/gb-4109（容量台账验证脚本run_tests.py：仅剩一份时并发争抢、失联回收后旧执行者回来、满库恢复等量替换等场景），源码不混入。MIT License。

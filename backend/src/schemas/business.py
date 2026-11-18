@@ -26,3 +26,4 @@ class RunInput(BaseModel):
  name:str=Field(min_length=2,max_length=120)
  mapping_id:int
 class RestoreInput(BaseModel):backup:dict
+class CapacityInput(BaseModel):limit:int=Field(ge=0,le=2000000)

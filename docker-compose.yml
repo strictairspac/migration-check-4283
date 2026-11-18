@@ -6,6 +6,8 @@ x-app: &app
     REDIS_URL: redis://redis:6379/0
     JWT_SECRET: ${JWT_SECRET:-migration-check-local-demo-secret-change-before-use}
     SEED_DEMO: ${SEED_DEMO:-true}
+    TARGET_ROW_LIMIT: ${TARGET_ROW_LIMIT:-1000}
+    EXECUTOR_STALE_SECONDS: ${EXECUTOR_STALE_SECONDS:-120}
   volumes:
     - artifacts:/artifacts
   depends_on:

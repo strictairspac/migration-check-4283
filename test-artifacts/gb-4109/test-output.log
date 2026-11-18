@@ -1,0 +1,55 @@
+ERROR:root:migration failed
+Traceback (most recent call last):
+  File "/workspace/backend/src/worker.py", line 33, in handle
+    result=migrate(snapshot['batch']['rows'],snapshot['mapping']['rules'],snapshot['mapping']['chunk_size'],lambda info:progress(run_id,info))
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/test-artifacts/gb-4109/run_tests.py", line 127, in boom
+    def boom(*a,**k):raise RuntimeError('boom')
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: boom
+T1 受理即预留；容量不足拒绝并说明差额
+  PASS T1 受理即预留6行，可用4行
+  PASS T1 拒绝受理并说明差多少
+  PASS T1 拒绝原因已入容量事件供页面核对
+T2 坏行与同键重复行不占额度
+  PASS T2 8行源仅预留4行（重复键/非法数/空值/缺列不占额）
+T3 仅剩一份时并发争抢
+  PASS T3 恰有一个受理成功，其余被拒
+  PASS T3 失败者均409且说明差额
+  PASS T3 并发受理未超额：预留5可用0
+T4 落库时预留转为实占
+  PASS T4 受理预留7行
+  PASS T4 完成后预留转实占
+  PASS T4 台账与目标表实际行数一致
+  PASS T4 拒绝区保留重复键与坏行
+T5 取消归还额度
+  PASS T5 排队取消后预留归还
+  PASS T5 重复取消拒绝且不重复归还
+T6 执行失败归还额度
+  PASS T6 失败归还预留
+T7 执行失联回收 + 迟到的旧执行者回来
+  PASS T7 失联后运行置失败并回收预留
+  PASS T7 迟到执行者落库被拒绝
+  PASS T7 迟到执行者未留下目标行，额度不变
+  PASS T7 迟到执行者心跳上报被拒绝
+  PASS T7 失败运行不会被重新接走
+T8 重试不重复占额
+  PASS T8 重复提交/释放/回收均幂等
+  PASS T8 恢复重试净增为0不重复占额
+T9 满库恢复与上限校验
+  PASS T9 满库：实占7可用0
+  PASS T9 满库新受理拒绝并说明差额
+  PASS T9 满库等量替换恢复成功
+  PASS T9 恢复事件记录净增0行
+  PASS T9 上限不得低于当前实占
+  PASS T9 空批次净增0满库可受理完成
+T10 API 冒烟：权限 / 拒绝报文 / 容量页数据
+  PASS T10 三账号可登录
+  PASS T10 健康检查通过
+  PASS T10 非管理员不能调上限
+  PASS T10 管理员调整上限
+  PASS T10 超额受理409且说明差额
+  PASS T10 容量页可核对上限/实占/预留/拒绝原因
+  PASS T10 观察员可查看运行列表
+============================================================
+结果：全部通过（失败 0 项）
